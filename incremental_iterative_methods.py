@@ -19,26 +19,32 @@ from expmap import PrintTimeit
 
 
 def func(x):
-    """Return a mathematical function."""
+    """Return a mathematical function.
+    
+    returns: function object
+    
+    Functions composed of special functions like trigonometric functions etc.
+    must be defined with definitions of those functions from the sympy module!
+    
+    Examples:
+    math.e**(-x) - x  # math module can be used for constants
+    sp.cos(x) - 2*x  # use sympy (sp) for sin(), cos(), sqrt() etc.
+    sp.sqrt(x)  # WARNING: issues arise because the solution may be negative
+    """
     return math.e**(-x) - x
 
 
-# derive the function only once instead each time in newton_raphson()
-# during the while loop execution when iterate() is called
-# OLD CODE: iterate ran in 0.01505s
-# NEW CODE: iterate ran in 0.00162s
-# cProfile.run() number of calls reduced from 24k to 2.2k
 def derive_func(f):
-    """Return the lambdified derivative of mathematical function.
+    """Return lambdified mathematical function and it's lambdified derivative.
     
     f -- function object
     
-    returns: function object
+    returns: tuple of two function objects
     """
     x = sp.Symbol('x')
     symbolic_f = f(x)
     derivative_f = symbolic_f.diff(x)
-    return sp.lambdify(x, derivative_f)
+    return sp.lambdify(x, symbolic_f), sp.lambdify(x, derivative_f)
 
 
 def error(a, b):
@@ -72,6 +78,7 @@ def riks(f, df, xn):
     Return the solution of a function by using Riks (Arc Length) method.
     
     f -- mathematical function of ONE argument
+    df -- function object, derivative of mathematical function
     xn -- float, current initial guess
     
     returns: float
@@ -79,24 +86,39 @@ def riks(f, df, xn):
     pass
 
 
+# @PrintTimeit
 def iterate(f, x0, method=newton_raphson, tol=1e-7):
-    """Return the solution of iteration procedure for the chosen method."""
-    df = derive_func(f)
+    """Return the solution of iteration procedure for the chosen method.
+    
+    f -- function object mathematical function of ONE argument
+    x0 -- float, initial guess
+    method -- function object
+    tol -- float
+    
+    returns: float
+    
+    Derive the function only once instead each time in newton_raphson()
+    # during the while loop execution when newton_raphson() is called
+    # OLD CODE: iterate ran in 0.01505s
+    # NEW CODE: iterate ran in 0.00162s
+    # cProfile.run() number of calls reduced from 24k to 2.2k
+    """
+    f, df = derive_func(f)
     while error(method(f, df, x0), x0) > tol:
         x0 = method(f, df, x0)
     return method(f, df, x0)
 
 
-def incremental(increment=0.1):
+def increment_it(increment=0.1):
     """Return the solution to a mathematical problem by using increments."""
     pass
     
     
 def main():
-    print(newton_raphson(func, derive_func(func), 0))
-    # cProfile.run('newton_raphson(func, 0)')
-    print(iterate(func, 0))
-    cProfile.run('iterate(func, 0)')
+    print(newton_raphson(func, derive_func(func)[-1], 0))
+    # cProfile.run('newton_raphson(func, derive_func(func)[-1], 0)')
+    print(iterate(func, 0.5))
+    # cProfile.run('iterate(func, 0)')
     # print(iterate(func, 0, method=riks))
 
 
