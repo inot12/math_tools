@@ -10,7 +10,7 @@ A collection of interpolation algorithms.
 import numpy as np
 import math
 import sympy
-from math_functions.algebra_functions import factorial
+from algebra_functions import factorial
 
    
 def lagrange_polynomial(points):
