@@ -35,7 +35,7 @@ def func(x):
     return math.e**(-x) - x
 
 
-def derivative(f, x, h=1e-6):
+def derivative(f, x, h=1e-7):
     """Return approximate derivative by using symmetric difference quotient.
     
     f -- function object
@@ -72,7 +72,7 @@ def error(a, b):
     return abs(a-b) / abs(a)
     
 
-def newton_raphson(f, xn):
+def newton_raphson(f, df, xn):
     """
     Return the solution of a function by using Newton-Raphson method.
     
@@ -84,7 +84,7 @@ def newton_raphson(f, xn):
     
     x_n+1 = x_n - f(x_n)/df(x_n)
     """
-    return xn - f(xn) / derivative(f, xn)
+    return xn - f(xn) / df(xn)
 
 
 def riks(f, df, xn):
@@ -119,12 +119,12 @@ def iterate(f, x0, method=newton_raphson, tol=1e-7, imax=10):
     # AFTER LAMBDIFYING f and df: iterate ran in 0.06404s
     # cProfile.run() number of calls reduced from 24k to 2.2k
     """
-    # f, df = derive_func(f)
+    f, df = derive_func(f)
     i = 0
-    while error(method(f, x0), x0) > tol and i < imax:
-        x0 = method(f, x0)
+    while error(method(f, df, x0), x0) > tol and i < imax:
+        x0 = method(f, df, x0)
         i += 1
-    return method(f, x0)
+    return method(f, df, x0)
 
 
 def increment_it(increment=0.1):

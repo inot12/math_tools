@@ -35,7 +35,7 @@ class TestIncrementalIterativeMethod(unittest.TestCase):
     
     def test_newton_raphson(self):
         """Test the function newton_raphson"""
-        self.assertAlmostEqual(iim.newton_raphson(self.f, 0), 0.5)
+        self.assertAlmostEqual(iim.newton_raphson(self.f, self.df, 0), 0.5)
         
     def test_iterate(self):
         """Test the function iterate()."""
