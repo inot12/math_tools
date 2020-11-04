@@ -31,11 +31,12 @@ def func(x):
     math.e**(-x) - x  # math module can be used for constants
     sp.cos(x) - 2*x  # use sympy (sp) for sin(), cos(), sqrt() etc.
     sp.sqrt(x)  # WARNING: issues arise because the solution may be negative
+    math.sin(x**2) - x**3 - 1
     """
-    return math.e**(-x) - x
+    return math.sin(x**2) - x**3 - 1
 
 
-def derivative(f, x, h=1e-6):
+def derivative(f, x, h=1e-7):
     """Return approximate derivative by using symmetric difference quotient.
     
     f -- function object
@@ -47,7 +48,6 @@ def derivative(f, x, h=1e-6):
     return (f(x+h) - f(x-h)) / (2*h)
 
 
-@PrintTimeit
 def derive_func(f):
     """Return lambdified mathematical function and it's lambdified derivative.
     
@@ -59,6 +59,29 @@ def derive_func(f):
     symbolic_f = f(x)
     derivative_f = symbolic_f.diff(x)
     return sp.lambdify(x, symbolic_f), sp.lambdify(x, derivative_f)
+
+
+def plot_func(f, a, b, nsteps=100):
+    """Plot a function.
+    
+    f -- function object
+    a, b -- float, plot limits
+    nsteps -- int, number of steps for the plot
+    """
+    x = tuple((a+i*(b-a)/nsteps for i in range(nsteps+1)))
+    # x = np.linspace(a, b, num=100)
+    y = tuple((f(val) for val in x))
+    # y = f(x)  # change math.sin -> np.sin
+    fig = plt.figure(1)
+    plt.plot(x, y, linewidth=2, label='f(x)')
+    plt.xlabel('$x$')
+    plt.ylabel('$f(x)$')
+    plt.legend(loc='lower right')
+    plt.grid(linestyle='--', linewidth=0.5)
+    plt.ion()
+    plt.show()
+    fig.savefig('function' + '.png')
+    plt.close(fig)
 
 
 def error(a, b):
@@ -101,7 +124,7 @@ def riks(f, df, xn):
 
 
 @PrintTimeit
-def iterate(f, x0, method=newton_raphson, tol=1e-7, imax=10):
+def iterate(f, x0, method=newton_raphson, tol=1e-7, imax=50):
     """Return the solution of iteration procedure for the chosen method.
     
     f -- function object mathematical function of ONE argument
@@ -124,6 +147,11 @@ def iterate(f, x0, method=newton_raphson, tol=1e-7, imax=10):
     while error(method(f, x0), x0) > tol and i < imax:
         x0 = method(f, x0)
         i += 1
+        
+    if i >= imax:
+        raise MaxNumberOfIterationsWarning(
+            'WARNING: Exceeded maximum number of iterations.')
+        
     return method(f, x0)
 
 
@@ -217,14 +245,20 @@ class HuggingEllipses:
         return f
     
     
+class MaxNumberOfIterationsWarning(RuntimeWarning):
+    pass
+    
+    
 def main():
     # print(newton_raphson(func, derive_func(func)[-1], 0))
     # cProfile.run('newton_raphson(func, derive_func(func)[-1], 0)')
-    print(iterate(func, 0))
+    # print(iterate(func, 0))
     # cProfile.run('iterate(func, 0)')
+    print(iterate(func, -0.8))
     # print(iterate(func, 0, method=riks))
     # f = HuggingEllipses()
     # xn = nr(f, tolerance=1e-7)
+    plot_func(func, -1.5, 1.5)
 
 
 if __name__ == "__main__":
