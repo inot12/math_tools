@@ -135,11 +135,9 @@ def iterate(f, x0, method=newton_raphson, tol=1e-7, imax=50):
     
     returns: float
     
-    Derive the function only once instead each time in newton_raphson()
-    # during the while loop execution when newton_raphson() is called
-    # OLD CODE: iterate ran in 0.01505s
-    # NEW CODE: iterate ran in 0.00162s
-    # AFTER LAMBDIFYING f and df: iterate ran in 0.06404s
+    Numerical differentiation is more efficient than symbolic differentiation.
+    # NUMERIC: iterate ran in 2e-05s
+    # SYMBOLIC: iterate ran in 0.06404s
     # cProfile.run() number of calls reduced from 24k to 2.2k
     """
     # f, df = derive_func(f)
@@ -158,106 +156,19 @@ def iterate(f, x0, method=newton_raphson, tol=1e-7, imax=50):
 def increment_it(increment=0.1):
     """Return the solution to a mathematical problem by using increments."""
     pass
-     
-
-@PrintTimeit
-def nr(f, x_guess=None, max_num_iter=100, tolerance=1e-4, alpha=1.0,
-       print_info=True):
-    """
-    Author: Christian Howard
-    Function for representing a Newton-Raphson iteration for multidimensional
-    systems of equations.
-    :param f: function class that must define the following methods:
-        - numDims(): Method that returns an integer number of variables in the
-        system of equations
-        - getJacobian(np.ndarray): Method to compute the Jacobian of the
-        system of equations at the current root estimate.The output is an
-        n by n matrix where n is the number of variables in the system of
-        equations
-        - __call__(np.ndarray): Method to make this class act like a function
-        operating on some input x
-    :param x_guess: an initial guess for the Newton-Raphson iteration
-    :param max_num_iter: a maximum number of iterations that will be taken
-    :param tolerance: a tolerance that will stop the sequence once the error
-    drops below it
-    :param alpha: A coefficient that can tune the Newton-Raphson stepsize.
-    Recommend setting alpha <= 1.
-    :return: A tuple with the root estimate, final error for the root, and the
-    number of iterations it took
-    """
-    # set the initial guess
-    if x_guess is None:
-        x_guess = np.random.rand(f.numDims())
-    x = x_guess
- 
-    # compute function value at initial guess
-    fx = f(x)
- 
-    # define the initial value for the error and the starting iteration count
-    err = np.linalg.norm(fx)
-    iter_ = 0
- 
-    if print_info:
-        print(f"Iteration {iter_}: Error of {err} with an estimate of {x}")
- 
-    # perform the Newton-Raphson iteration algo
-    while err > tolerance and iter_ < max_num_iter:
- 
-        # perform newton step
-        x = x - alpha * np.linalg.solve(f.getJacobian(x), fx)
- 
-        # update the function value at the new root estimate
-        fx = f(x)
- 
-        # compute the current root error
-        err = np.linalg.norm(fx)
- 
-        # update the iteration counter
-        iter_ = iter_ + 1
- 
-        # print useful message
-        if print_info:
-            print(f"Iteration {iter_}: Error of {err} with an estimate of {x}")
- 
-    # return the root estimate, 2-norm error of the estimate, and iteration
-    # count we ended at
-    return (x, err, iter_)
 
 
-class HuggingEllipses:
-    """Defines the equations to be solved by nr().
-    f1(x) = (x1-1)**2 + 4*x2**2 -1
-    f2(x) = (x1-2)**2 + 4*x2**2 -4
-    """
-    def __init__(self):
-        self.name = "HuggingEllipses"
- 
-    def numDims(self):
-        return 2
- 
-    def getJacobian(self, x):
-        return np.array([[2*(x[0]-1), 8*x[1]], [2*(x[0]-2), 8*x[1]]])
- 
-    def __call__(self, x):
-        f = np.zeros((2, ))
-        f[0] = (x[0]-1)**2 + 4*x[1]**2 - 1
-        f[1] = (x[0]-2)**2 + 4*x[1]**2 - 4
-        return f
-    
-    
 class MaxNumberOfIterationsWarning(RuntimeWarning):
     pass
     
     
 def main():
-    # print(newton_raphson(func, derive_func(func)[-1], 0))
-    # cProfile.run('newton_raphson(func, derive_func(func)[-1], 0)')
     # print(iterate(func, 0))
     # cProfile.run('iterate(func, 0)')
     print(iterate(func, -0.8))
+    cProfile.run('iterate(func, 0)')
     # print(iterate(func, 0, method=riks))
-    # f = HuggingEllipses()
-    # xn = nr(f, tolerance=1e-7)
+    
     plot_func(func, -1.5, 1.5)
 
 
