@@ -138,7 +138,8 @@ def iterate(f, x0, method=newton_raphson, tol=1e-7, imax=50):
     Numerical differentiation is more efficient than symbolic differentiation.
     # NUMERIC: iterate ran in 2e-05s
     # SYMBOLIC: iterate ran in 0.06404s
-    # cProfile.run() number of calls reduced from 24k to 2.2k
+    # cProfile.run() number of calls reduced from:
+    # 86 function calls in 0.000 seconds
     """
     # f, df = derive_func(f)
     i = 0
@@ -166,7 +167,7 @@ def main():
     # print(iterate(func, 0))
     # cProfile.run('iterate(func, 0)')
     print(iterate(func, -0.8))
-    cProfile.run('iterate(func, 0)')
+    cProfile.run('iterate(func, -0.8)')
     # print(iterate(func, 0, method=riks))
     
     plot_func(func, -1.5, 1.5)
