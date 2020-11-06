@@ -111,15 +111,21 @@ def newton_raphson(f, xn):
     return xn - f(xn) / derivative(f, xn)
 
 
-def riks(f, xn):
+def riks(f, xn, inct=0.002):
     """
     Return the solution of a function by using Riks (Arc Length) method.
     
     f -- function object, mathematical function of ONE argument
     xn -- float, current initial guess
+    inct -- float, default increment
     
     returns: float
     """
+    # if method == riks:
+    # if i != 0:
+    #     pass
+    # else:
+    #     newton_raphson(f, xn)
     pass
 
 
@@ -179,7 +185,7 @@ def main():
     # cProfile.run('iterate(func, -0.8)')
     # print(iterate(func, 0, method=riks))
     
-    plot_func(func, -1.5, 1.5)
+    # plot_func(func, -1.5, 1.5)
 
 
 if __name__ == "__main__":
