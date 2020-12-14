@@ -18,8 +18,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sympy as sp
 
-from expmap import PrintTimeit
-
 
 def func(x):
     """Return a mathematical function.
@@ -97,39 +95,45 @@ def error(a, b):
     return abs(a-b) / abs(a)
     
 
-def newton_raphson(f, xn):
+def newton_raphson(f, xn, i):
     """
     Return the solution of a function by using Newton-Raphson method.
     
     f -- function object, mathematical function of ONE argument
     xn -- float, current initial guess
+    i -- integer, current iteration
     
     returns: float
-    
     x_n+1 = x_n - f(x_n)/df(x_n)
+    
+    Parameter i exists only because both newton_raphson() and riks() are
+    called in the same function and for riks() this parameter is essential.
+    For newton-raphson parameter i is not used, therefore we delete it.
     """
+    del i
     return xn - f(xn) / derivative(f, xn)
 
 
-def riks(f, xn, inct=0.002):
+def riks(f, xi, i=0, inct=0.002):
     """
     Return the solution of a function by using Riks (Arc Length) method.
     
     f -- function object, mathematical function of ONE argument
-    xn -- float, current initial guess
+    xi -- float, current initial guess
+    i -- integer, current iteration
     inct -- float, default increment
     
     returns: float
+    
+    i is by default 0 because this is the first step of Riks method. This way
+    the Riks method can be used on its own outside an iteration loop.
     """
-    # if method == riks:
-    # if i != 0:
-    #     pass
-    # else:
-    #     newton_raphson(f, xn)
-    pass
+    if i != 0:
+        pass
+    else:
+        return newton_raphson(f, xi)
 
 
-@PrintTimeit
 def iterate(f, x0, method=newton_raphson, tol=1e-7, imax=50, echo=False):
     """Return the solution of iteration procedure for the chosen method.
     
@@ -150,26 +154,27 @@ def iterate(f, x0, method=newton_raphson, tol=1e-7, imax=50, echo=False):
     # 86 function calls in 0.000 seconds (NUMERIC)
     """
     i = 0
-    while error(method(f, x0), x0) > tol and i < imax:
-        if echo:
-            print(f'Iteration: {i:<3}\tx0={x0:<16}\txn={method(f, x0):<16}'
-                  f'\tError={error(method(f, x0), x0):<16}')
-        x0 = method(f, x0)
-        i += 1
-    
+        
     if echo:
-        print(f'Iteration: {i:<3}\tx0={x0:<16}\txn={method(f, x0):<16}'
-              f'\tError={error(method(f, x0), x0):<16}')
+        print(f'Iteration: {i:<3}\tx0={x0:<16}\txn={method(f, x0, i):<16}'
+              f'\tError={error(method(f, x0, i), x0):<16}')
+        
+    while error(method(f, x0, i), x0) > tol and i < imax:
+        x0 = method(f, x0, i)
+        i += 1
+        if echo:
+            print(f'Iteration: {i:<3}\tx0={x0:<16}\txn={method(f, x0, i):<16}'
+                  f'\tError={error(method(f, x0, i), x0):<16}')
         
     if i >= imax:
         warnings.warn(
             f'\nWARNING: Exceeded maximum number of iterations (imax={imax}).',
             category=RuntimeWarning)
         
-    return method(f, x0)
+    return method(f, x0, i)
 
 
-def increment_it(increment=0.1):
+def increment_it(load=0, increment=0.1):
     """Return the solution to a mathematical problem by using increments."""
     pass
 
@@ -179,8 +184,8 @@ class MaxNumberOfIterationsWarning(RuntimeWarning):
     
     
 def main():
-    print(iterate(func, 0))
-    # cProfile.run('iterate(func, 0)')
+    print(iterate(func, 0, echo=True))
+    cProfile.run('iterate(func, 0)')
     # print(iterate(func, 1, imax=21, echo=True))
     # cProfile.run('iterate(func, -0.8)')
     # print(iterate(func, 0, method=riks))
