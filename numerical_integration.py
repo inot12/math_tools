@@ -26,7 +26,9 @@ def simpson(f, x, h):
     Simpson rule is one of the Newton-Cotes formulas of the closed type.
     If your reference is Wikipedia we have Dx=h/2 and Simpson formula has
     Dx/3. Here we don't multiply by h, this is done in integrate, but we get
-    (1/2)/3 = 1/6 and f(xi) = f(x+i*Dx) i=0,1,2."""
+    (1/2)/3 = 1/6 and f(xi) = f(x+i*Dx) i=0,1,2.
+    The Simpson rule exactly integrates a polynomial of order n-1 if n is even
+    and of order n if n is odd. E.g. if n=3 the result is exact."""
     return (f(x) + 4*f(x + h/2) + f(x+h))/6.0
 
 
