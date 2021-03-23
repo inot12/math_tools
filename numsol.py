@@ -16,16 +16,15 @@ The function 'func' has to be modified to return your mathematical function
 every time you want to use Newton-Raphson or Riks to obtain its solution/roots.
 """
 
-import cProfile
+# import cProfile
 import math
 import warnings
 
 import numpy as np
 import matplotlib.pyplot as plt
-# import scipy as scp
-from scipy.linalg import lu_factor, lu_solve
-
 import sympy as sp
+
+from scipy.linalg import lu_factor, lu_solve, lstsq
 
 
 def func(x):
@@ -37,7 +36,6 @@ def func(x):
     
     Examples:
     math.e**(-x) - x  # math module can be used for constants
-    sp.sqrt(x)  # WARNING: issues arise because the solution may be negative
     sp.cos(x) - 2*x  # sympy (sp) can be used for sin(), cos(), sqrt() etc.
     math.sin(x**2) - x**3 - 1
     np.sin(x**2) - x**3 - 1
@@ -148,16 +146,15 @@ def nr(f, xn, i):
     return xn - f(xn) / derivative(f, xn)
 
 
-def newton_raphson(f, x, i, jacobian=False):
+def newton_raphson(f, x, i, jacobian=True):
     """
     Return the solution a system of equations by using Newton-Raphson method.
     
     f -- vector of function objects or tangential matrix
     x -- vector of floats or load vector
     i -- integer, current iteration
-    jacobian -- boolean, by default indicates that jacobian matrix doesn't
-    exist and will be calculated, pass jacobian=True to skip the calculation
-    of the jacobian
+    jacobian -- boolean, by default indicates that jacobian matrix must be
+    calculated, pass jacobian=False to skip the calculation of the jacobian
     
     returns: vector of floats
     
@@ -167,24 +164,25 @@ def newton_raphson(f, x, i, jacobian=False):
     """
     del i
     
-    if not jacobian:
-        J = Jacobian(f, x)
+    if jacobian:
+        F = -np.array([equation(*x) for equation in (f)])
+        Kt = Jacobian(f, x)
+        J = Kt
+    else:
+        F = np.array(x)
+        Kt = f(x)
+    
+    if len(f) > len(x):
         # calculate pseudo-inverse for over-constrained systems of nonlinear
         # equations because the inverse of J does not exist in this case
-        if len(f) > len(x):
-            J = np.linalg.inv(J.T@J) @ J.T
-        Kt = J
-        f_evaluated = []
-        for equation in (f):
-            f_evaluated.append(equation(*x))
-        F = -np.array(f_evaluated)
+        Jinv = np.linalg.inv(J.T@J) @ J.T
+        dx = Jinv @ F
+        # dx = lstsq(Kt, F)
     else:
-        Kt = f
-        F = np.array(x)
-
-    lu, piv = lu_factor(Kt)
-    dx = lu_solve((lu, piv), F)
-#     dx = np.linalg.solve(J, -np.array(f_evaluated))
+        lu, piv = lu_factor(Kt)
+        dx = lu_solve((lu, piv), F)
+#         dx = np.linalg.solve(J, F)
+        
     return x + dx
 
 
@@ -217,14 +215,16 @@ def riks(f, xi, i=0, inct=0.002):
     the Riks method can be used on its own outside an iteration loop.
     """
     if i != 0:
-        pass
+        xis = newton_raphson(f, xi, i)
+        xit = newton_raphson(f, inct*xi, i)
     else:
-        return newton_raphson(f, xi)
+        return newton_raphson(f, xi, i)
 
 
 def iterate(f, x0, method=newton_raphson, tol=1e-7, imax=50, echo=False):
     """Return the solution of iteration procedure for the chosen method.
     
+    parameters:
     f -- function object or vector of function objects
     x0 -- float or vector of floats, initial guess
     method -- function object
@@ -234,12 +234,9 @@ def iterate(f, x0, method=newton_raphson, tol=1e-7, imax=50, echo=False):
     
     returns: float or a vector of floats
     
-    Numerical differentiation is more efficient than symbolic differentiation.
-    # NUMERIC: iterate ran in 2e-05s
-    # SYMBOLIC: iterate ran in 0.06404s
-    # cProfile.run() number of calls reduced from:
-    # 3738 function calls (3566 primitive calls) in 0.004 seconds (SYMBOLIC)
-    # 86 function calls in 0.000 seconds (NUMERIC)
+    raises:
+    VauleError
+    If f is an empty numpy array.
     """
     if callable(f):
         f = np.array([f])
@@ -264,7 +261,7 @@ def iterate(f, x0, method=newton_raphson, tol=1e-7, imax=50, echo=False):
                   f'xn={np.array2string(method(f, x0, i)):<{w}}'
                   f'Error={np.array2string(error(method(f, x0, i), x0))}')
     
-        while np.any(error(method(f, x0, i), x0) > tol) and i <= imax:
+        while np.any(error(method(f, x0, i), x0) > tol) and i < imax:
             x0 = method(f, x0, i)
             i += 1
             if echo:
@@ -285,9 +282,23 @@ def iterate(f, x0, method=newton_raphson, tol=1e-7, imax=50, echo=False):
     return method(f, x0, i)
 
 
-def increment_it(load=0, increment=0.1):
-    """Return the solution to a mathematical problem by using increments."""
-    pass
+def increment_it(f, x0, nsteps=10, echo=False):
+    """Return the solution to a mathematical problem by using increments.
+    
+    At the moment this does not work.
+    We have to update the tangential matrix with for each displacement.
+    In the first increment, the tangential matrix is calculated from the
+    boundary conditions.
+    In every following increment, the tangential matrix is calculated
+    with the displacement from the previous increment."""
+    
+    inc = 1/nsteps
+    x = []
+    for k in range(1, nsteps+1):
+        xinc = k * inc * x0
+        print(f'INCREMENT {k}')
+        x.append(iterate(f, xinc, echo=echo))
+    return x
 
 
 class MaxNumberOfIterationsWarning(RuntimeWarning):
@@ -300,16 +311,57 @@ def sf1(x1, x2):
     
 def sf2(x1, x2):
     return x1**2 + 4*x2**2 - 4
+
+
+def g1(x1, x2):
+    return math.sin(x1) + 2*x2 + 1
+
+
+def g2(x1, x2):
+    return x1 - 3*x2**3 + 2
+
+
+def g3(x1, x2):
+    return x1**2 - x2 - 1
+
+
+def h1(x1, x2, x3):
+    return 3*x1 - math.cos(x2*x3) - 1.5
+
+
+def h2(x1, x2, x3):
+    return 4*x1**2 - 625*x2**2 + 2*x3 - 1
+
+
+def h3(x1, x2, x3):
+    return 20*x3 - math.e**-(x1*x2) + 9
+
+
+def k1(x1, x2, x3):
+    return x1**2 - 2*x1 + x2**2 - x3 + 1
+
+
+def k2(x1, x2, x3):
+    return x1*x2**2 - x1 - 3*x2 + x2*x3 + 2
+
+
+def k3(x1, x2, x3):
+    return x1*x3**2 - 3*x3 + x2*x3**2 + x1*x2
     
     
 def main():
-    print(iterate(func, 0, echo=True))
+    # print(iterate(func, 0, echo=True))
     # cProfile.run('iterate(func, 0)')
     # print(iterate(func, -100, imax=25, echo=True))
     # cProfile.run('iterate(func, -0.8)')
     # print(iterate(func, 0, method=riks))
     print(iterate(np.array([sf1, sf2]), np.array([1, 2]), echo=True))
-    print(iterate(np.array([]), np.array([1]), echo=True))
+    print(increment_it(np.array([sf1, sf2]), np.array([1, 2]), echo=True))
+    # print(iterate(np.array([g1, g2, g3]), np.array([0.5, 1]), echo=True))
+    # print(iterate(np.array([h1, h2, h3]), np.array([1, 1, 1]), echo=True))
+    # print(iterate(np.array([k1, k2, k3]), np.array([1, 2, 3]), echo=True))
+    # print(iterate(np.array([k1, k2, k3]), np.array([0, 0, 0]), echo=True))
+    # print(iterate(np.array([]), np.array([1]), echo=True))
     
     # plot_func(func, -1.5, 1.5)
     

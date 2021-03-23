@@ -4,13 +4,13 @@ Created on Nov 2, 2020
 
 @author:toni
 
+Unittests for functions from numsol.py.
 """
 
 import unittest
 import math
 import numpy as np
 import numsol as ns
-import sympy as sp
 
 
 class TestNumsol(unittest.TestCase):
@@ -20,7 +20,6 @@ class TestNumsol(unittest.TestCase):
         def f(x):
             return math.e**(-x) - x
         self.f = f
-        # self.df = ns.derive_func(f)[-1]
         
         def g(x):
             return x**2 - 4*x - 5
@@ -35,16 +34,9 @@ class TestNumsol(unittest.TestCase):
         
         def sf2(x1, x2):
             return x1**2 + 4*x2**2 - 4
+        self.sf2 = sf2
         
         self.sf = np.array([sf1, sf2])
-        
-        def of(x1, x2):
-            return x1**2 + 4*x2**2 - 4
-        self.of = of
-        
-        def k(x):
-            return sp.cos(x) - 2*x
-        self.k = k
     
     def test_nr(self):
         """Test the function nr"""
@@ -53,7 +45,7 @@ class TestNumsol(unittest.TestCase):
     def test_multivariate_derivative(self):
         """Test the function multivariate_derivative"""
         self.assertAlmostEqual(
-            ns.multivariate_derivative(self.of, np.array([1, 2]), varindex=1),
+            ns.multivariate_derivative(self.sf2, np.array([1, 2]), varindex=1),
             16)
         
     def test_Jacobian(self):
@@ -77,10 +69,6 @@ class TestNumsol(unittest.TestCase):
         self.assertAlmostEqual(ns.iterate(self.g, 10), 5, delta=1e-4)
         self.assertAlmostEqual(ns.iterate(self.h, 1), 1.3247, delta=1e-4)
         
-        # test for symbolic functions from sympy
-        self.assertAlmostEqual(ns.iterate(self.k, 0.5), 0.45018, delta=1e-4)
-        
-        # test iterate for multivariate nr; not working atm
         self.assertEqual(
             np.allclose(ns.iterate(self.sf, np.array([1, 2]),
                                    method=ns.newton_raphson),
@@ -95,7 +83,7 @@ class IterateBadInput(unittest.TestCase):
         """Create an instance of the class for use in all test methods."""
         self.f = np.array([])
 
-    def test_empty_array(self):  # test method names begin with 'test'
+    def test_empty_array(self):
         """newton_raphson should fail if array is empty"""
         self.assertRaises(ValueError, ns.iterate, self.f, x0=0)
 
