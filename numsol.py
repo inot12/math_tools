@@ -16,7 +16,7 @@ The function 'func' has to be modified to return your mathematical function
 every time you want to use Newton-Raphson or Riks to obtain its solution/roots.
 """
 
-# import cProfile
+import cProfile
 import math
 import warnings
 
@@ -24,7 +24,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sympy as sp
 
-from scipy.linalg import lu_factor, lu_solve, lstsq
+from scipy.linalg import lu_factor, lu_solve
 
 
 def func(x):
@@ -75,8 +75,8 @@ def multivariate_derivative(f, x, varindex, h=1e-7):
     x = x.astype(np.float64)
     x_plus = np.copy(x)
     x_minus = np.copy(x)
-    x_plus[varindex] = x_plus[varindex] + h
-    x_minus[varindex] = x_minus[varindex] - h
+    x_plus[varindex] += h
+    x_minus[varindex] -= h
     return (f(*x_plus) - f(*x_minus)) / (2*h)
 
 
@@ -119,10 +119,14 @@ def plot_func(f, a, b, nsteps=100):
 def error(a, b):
     """Return the relative error of two values.
     
-    a -- float, reference value
-    b -- float, value compared to reference value
+    a -- float or array-like, reference value
+    b -- float or array-like, value compared to reference value
     
     returns: float, relative error
+    
+    TO DO:
+    Currently does not handle the bug where the reference value a is zero or
+    contains an element that is zero.
     """
     return abs(a-b) / abs(a)
     
@@ -146,7 +150,7 @@ def nr(f, xn, i):
     return xn - f(xn) / derivative(f, xn)
 
 
-def newton_raphson(f, x, i, jacobian=True):
+def newton_raphson(f, x, i, jacobian=True, inc=None):
     """
     Return the solution a system of equations by using Newton-Raphson method.
     
@@ -155,6 +159,7 @@ def newton_raphson(f, x, i, jacobian=True):
     i -- integer, current iteration
     jacobian -- boolean, by default indicates that jacobian matrix must be
     calculated, pass jacobian=False to skip the calculation of the jacobian
+    inc -- float, increment that scales the variable F
     
     returns: vector of floats
     
@@ -166,10 +171,22 @@ def newton_raphson(f, x, i, jacobian=True):
     
     if jacobian:
         F = -np.array([equation(*x) for equation in (f)])
+        # the commented line ensures scaling of F with lambda, but I don't
+        # think I want to do this in this case
+        # if inc:
+            # F = F * inc
         Kt = Jacobian(f, x)
         J = Kt
     else:
         F = np.array(x)
+        # scaling should be only done here
+        if inc:
+            # Here we should have the external load Ro and internal load Ri,
+            # F should be inc*Ro-Ri(x), need to pass Ro and Ri as parameters
+            # of newton_raphson and Ri has to change in each iteration, for
+            # the next increment we use Ri from the last iteration of the
+            # previous increment
+            F = F * inc
         Kt = f(x)
     
     if len(f) > len(x):
@@ -177,7 +194,7 @@ def newton_raphson(f, x, i, jacobian=True):
         # equations because the inverse of J does not exist in this case
         Jinv = np.linalg.inv(J.T@J) @ J.T
         dx = Jinv @ F
-        # dx = lstsq(Kt, F)
+        # dx = lstsq(Kt, F)  # for solving non-square matrices from scipy
     else:
         lu, piv = lu_factor(Kt)
         dx = lu_solve((lu, piv), F)
@@ -200,28 +217,46 @@ def Jacobian(f, x):
     return J
     
 
-def riks(f, xi, i=0, inct=0.002):
+def riks(f, xi, i=0, inct=0.002, inc=None):
     """
     Return the solution of a function by using Riks (Arc Length) method.
     
     f -- function object, mathematical function of ONE argument
     xi -- float, current initial guess
     i -- integer, current iteration
-    inct -- float, default increment
+    inct -- float, tangential increment
+    inc -- float, increment
     
     returns: float
     
     i is by default 0 because this is the first step of Riks method. This way
     the Riks method can be used on its own outside an iteration loop.
+    
+    At this point of time it is not clear to me what riks should do.
+    From my understanding, the first iteration is to do newton-raphson.
+    After that we do the stuff that is described.
+    Can you use riks without increments?
     """
-    if i != 0:
-        xis = newton_raphson(f, xi, i)
-        xit = newton_raphson(f, inct*xi, i)
-    else:
-        return newton_raphson(f, xi, i)
+    
+    if i == 0:
+        global x0
+        x0 = xi
+        return newton_raphson(f, xi, i, inc=inc)
+    
+    xis = newton_raphson(f, xi, i, inc=inc)
+    xit = newton_raphson(f, xi, i, inc=inct)
+    dx0 = xi - x0
+    dxs = xis - xi
+    dxt = xit - xi
+    coeff = (dx0.T @ dxs) / (inc*inct + dx0.T@dxt)
+    global inci
+    inci = coeff * inct
+    dxi = dxs - coeff * dxt
+    return xi + dxi
 
 
-def iterate(f, x0, method=newton_raphson, tol=1e-7, imax=50, echo=False):
+def iterate(f, x0, method=newton_raphson, tol=1e-7, imax=50, echo=False,
+            inc=None):
     """Return the solution of iteration procedure for the chosen method.
     
     parameters:
@@ -231,6 +266,7 @@ def iterate(f, x0, method=newton_raphson, tol=1e-7, imax=50, echo=False):
     tol -- float
     imax -- integer, maximum number of iterations
     echo -- boolean, call iterate() with echo=True to print iteration
+    ik -- float, increment
     
     returns: float or a vector of floats
     
@@ -247,6 +283,10 @@ def iterate(f, x0, method=newton_raphson, tol=1e-7, imax=50, echo=False):
     if f.size == 0:
         raise ValueError('f cannot be an empty numpy array')
     
+    if method == riks:
+        if not inc:
+            inc = 1
+    
     i = 0
     with np.printoptions(precision=5):
         p = np.get_printoptions()['precision']
@@ -255,31 +295,34 @@ def iterate(f, x0, method=newton_raphson, tol=1e-7, imax=50, echo=False):
         tab = 4
         w = (s+p) * nvars + tab
         
+        a2s = np.array2string
         if echo:
             print(f'Iteration: {i:<3}'
-                  f'x0={np.array2string(x0):<{w}}'
-                  f'xn={np.array2string(method(f, x0, i)):<{w}}'
-                  f'Error={np.array2string(error(method(f, x0, i), x0))}')
+                  f'x0={a2s(x0):<{w}}'
+                  f'xn={a2s(method(f, x0, i, inc=inc)):<{w}}'
+                  f'Error={a2s(error(method(f, x0, i, inc=inc), x0))}')
     
-        while np.any(error(method(f, x0, i), x0) > tol) and i < imax:
-            x0 = method(f, x0, i)
+        while np.any(error(method(f, x0, i, inc=inc), x0) > tol) and i < imax:
+            if method == riks and i > 1:
+                inc += inci
+            x0 = method(f, x0, i, inc=inc)
             i += 1
             if echo:
                 print(f'Iteration: {i:<3}'
-                      f'x0={np.array2string(x0):<{w}}'
-                      f'xn={np.array2string(method(f, x0, i)):<{w}}'
-                      f'Error={np.array2string(error(method(f, x0, i), x0))}')
+                      f'x0={a2s(x0):<{w}}'
+                      f'xn={a2s(method(f, x0, i, inc=inc)):<{w}}'
+                      f'Error={a2s(error(method(f, x0, i, inc=inc), x0))}')
     
-    if np.any(error(method(f, x0, i), x0) > tol) and i >= imax:
+    if np.any(error(method(f, x0, i, inc=inc), x0) > tol) and i >= imax:
         warnings.warn(
             f'\nWARNING: Exceeded maximum number of iterations (imax={imax}).'
             ' Try changing initial guess x0 or increasing imax.',
             category=RuntimeWarning)
         
     if len(f) == 1:
-        return float(method(f, x0, i))
+        return float(method(f, x0, i, inc=inc))
     
-    return method(f, x0, i)
+    return method(f, x0, i, inc=inc)
 
 
 def increment_it(f, x0, nsteps=10, echo=False):
@@ -290,14 +333,22 @@ def increment_it(f, x0, nsteps=10, echo=False):
     In the first increment, the tangential matrix is calculated from the
     boundary conditions.
     In every following increment, the tangential matrix is calculated
-    with the displacement from the previous increment."""
+    with the displacement from the previous increment.
+    
+    I am still not confident. The solution to pass increment to iterate and
+    newton-raphson to multiply the F variable with inc is not elegant.
+    And I think it does not work as intended.
+    We shall see. I need to define some benchmark from simo and test it here"""
     
     inc = 1/nsteps
     x = []
+    x.append(x0)
     for k in range(1, nsteps+1):
-        xinc = k * inc * x0
+        inck = k * inc
         print(f'INCREMENT {k}')
-        x.append(iterate(f, xinc, echo=echo))
+        print(f'Lambda={inck}')
+        x.append(iterate(f, x[k-1], echo=echo, inc=inck))
+        print(x[k-1])
     return x
 
 
@@ -350,20 +401,22 @@ def k3(x1, x2, x3):
     
     
 def main():
-    # print(iterate(func, 0, echo=True))
-    # cProfile.run('iterate(func, 0)')
-    # print(iterate(func, -100, imax=25, echo=True))
-    # cProfile.run('iterate(func, -0.8)')
-    # print(iterate(func, 0, method=riks))
+    print(iterate(func, 0, echo=True))
+    p = False
+    if p:
+        cProfile.run('iterate(func, 0)')
+        cProfile.run('iterate(func, -0.8)')
+    print(iterate(func, 0, method=riks, echo=True))
     print(iterate(np.array([sf1, sf2]), np.array([1, 2]), echo=True))
+    print(iterate(np.array([sf1, sf2]), np.array([1, 2]), echo=True,
+                  method=riks))
     print(increment_it(np.array([sf1, sf2]), np.array([1, 2]), echo=True))
-    # print(iterate(np.array([g1, g2, g3]), np.array([0.5, 1]), echo=True))
-    # print(iterate(np.array([h1, h2, h3]), np.array([1, 1, 1]), echo=True))
-    # print(iterate(np.array([k1, k2, k3]), np.array([1, 2, 3]), echo=True))
-    # print(iterate(np.array([k1, k2, k3]), np.array([0, 0, 0]), echo=True))
-    # print(iterate(np.array([]), np.array([1]), echo=True))
+    print(iterate(np.array([g1, g2, g3]), np.array([0.5, 1]), echo=True))
+    print(iterate(np.array([h1, h2, h3]), np.array([1, 1, 1]), echo=True))
+    print(iterate(np.array([k1, k2, k3]), np.array([1, 2, 3]), echo=True))
+    print(iterate(np.array([k1, k2, k3]), np.array([0, 0, 0]), echo=True))
     
-    # plot_func(func, -1.5, 1.5)
+    plot_func(func, -1.5, 1.5)
     
 
 if __name__ == "__main__":
