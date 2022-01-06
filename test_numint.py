@@ -22,10 +22,10 @@ import numint as ni
 
 class TestNumint(unittest.TestCase):
     """Describe the test case."""
-    
+
     def setUp(self):
         pass
-    
+
     def test_mid_rect(self):
         """Describe the test.
         Methods are always named 'test_'+'function/class/method'."""
@@ -39,7 +39,7 @@ class TestNumint(unittest.TestCase):
 
 class ClassNameFunctionNameKnownValues(unittest.TestCase):
     """Test for known values of class ClassName or function FunctionName."""
-    
+
     def setUp(self):
         """Create an instance of the class for use in all test methods."""
         # only used for classes; not required for testing functions
@@ -47,12 +47,12 @@ class ClassNameFunctionNameKnownValues(unittest.TestCase):
         # example:
         # self.instance_name = Class(*args)
         pass  # instance initialization comes here
-    
+
     def tearDown(self):
         """Destroy all instances of tested files for a clean state."""
         # tearDown method runs AFTER EVERY SINGLE TEST
         pass
-    
+
     @classmethod  # we work with the class and not the instance of the class
     def setUpClass(cls):
         """RUNS BEFORE ANYTHING IN THE TEST."""
@@ -60,16 +60,16 @@ class ClassNameFunctionNameKnownValues(unittest.TestCase):
         # this does not run before every single test individually,
         # but before all tests, and it does it only once
         pass
-    
+
     @classmethod
     def tearDownClass(cls):
         """RUNS AFTER ANYTHING IN THE TEST."""
         pass
-    
+
     def test_case1(self):  # test method names begin with 'test'
         """f should return known results for known values"""
         self.assertEqual(f(known_value), known_result)
-        
+
     def test_case2(self):
         """f should return known results for known values"""
         self.assertEqual(f(known_value), known_result)
@@ -77,12 +77,12 @@ class ClassNameFunctionNameKnownValues(unittest.TestCase):
 
 class ClassNameFunctionNameBadInput(unittest.TestCase):
     """Test for bad inputs of class ClassName or function FunctionName."""
-    
+
     def setUp(self):
         """Create an instance of the class for use in all test methods."""
         # only used for classes; not required for testing functions
         pass  # instance initialization comes here
-    
+
     def test_case1(self):  # test method names begin with 'test'
         """f should fail if condition"""
         # we test excetpions by assertRaises
@@ -94,11 +94,11 @@ class ClassNameFunctionNameBadInput(unittest.TestCase):
         # We test for zero division error
         # self.assertRaises(ValueError, mdl.divide, 5, 0)
         self.assertRaises(ErrorType, mdl.f, *args)
-        
+
     def test_case2(self):
         """f should fail if condition"""
         self.assertRaises(ErrorType, mdl.f, *args)
-        
+
     def test_case3(self):
         """Alternative with context manager.
         Use if you have more exceptions of the same type."""
@@ -106,7 +106,7 @@ class ClassNameFunctionNameBadInput(unittest.TestCase):
             calc.divide(10, 0)
             calc.divide(10, '1')
 
-       
+
 def main():
     # unittest.main() enables you to call the test from CLI as:
     # $ python3 <test_scriptname.py>
