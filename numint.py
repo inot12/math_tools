@@ -5,6 +5,11 @@ Created on Oct 12, 2020
 @author:toni
 
 A collection of functions for numerical integration.
+
+https://en.wikipedia.org/wiki/Gaussian_quadrature
+https://rosettacode.org/wiki/Numerical_integration
+https://rosettacode.org/wiki/Numerical_integration/Gauss-Legendre_Quadrature
+https://computation.physics.utoronto.ca/python-reference/learning-examples/numerical-integration/
 """
 
 import numpy as np
@@ -87,6 +92,108 @@ def gauss_legendre(func, a, b):
     # Yields an exact results for polynomials of 2*n-1 or less.
     # The nodes x_i and weights w_i are chosen manually and i = 1, ..., n.
     return scint.quadrature(func, a, b)
+
+
+def Legendre(n, x):
+    """Recursive generation of the Legendre polynomial of order n."""
+    x = np.array(x)
+    if n == 0:
+        return x * 0 + 1.0
+    elif n == 1:
+        return x
+    else:
+        return ((2.0 * n - 1.0) * x * Legendre(n - 1, x) - (n - 1) * Legendre(n - 2, x)) / n
+
+
+def DLegendre(n, x):
+    """# Derivative of the Legendre polynomials."""
+    x = np.array(x)
+    if n == 0:
+        return x * 0
+    elif n == 1:
+        return x * 0 + 1.0
+    else:
+        return (n / (x ** 2 - 1.0)) * (x * Legendre(n, x) - Legendre(n - 1, x))
+
+
+def LegendreRoots(polyorder, tolerance=1e-20):
+    """Roots of the polynomial obtained using Newton-Raphson method."""
+    if polyorder < 2:
+        err = 1  # bad polyorder; no roots can be found
+    else:
+        roots = []
+        # The polynomials are alternately even and odd functions.
+        # Therefore we evaluate only half the number of roots.
+        for i in range(1, int(polyorder / 2) + 1):
+            x = np.cos(np.pi * (i - 0.25) / (polyorder + 0.5))
+            error = 10 * tolerance
+            iters = 0
+            while (error > tolerance) and (iters < 1000):
+                dx = -Legendre(polyorder, x) / DLegendre(polyorder, x)
+                x = x + dx
+                iters = iters + 1
+                error = abs(dx)
+            roots.append(x)
+        # Use symmetry to get the other roots
+        roots = np.array(roots)
+        if polyorder % 2 == 0:
+            roots = np.concatenate((-1.0 * roots, roots[::-1]))
+        else:
+            roots = np.concatenate((-1.0 * roots, [0.0], roots[::-1]))
+        err = 0  # successfully determined roots
+    return [roots, err]
+
+
+def GaussLegendreWeights(polyorder):
+    """Calculate weight coefficients."""
+    W = []
+    [xis, err] = LegendreRoots(polyorder)
+    if err == 0:
+        W = 2.0 / ((1.0 - xis ** 2) * (DLegendre(polyorder, xis) ** 2))
+        err = 0
+    else:
+        err = 1  # could not determine roots - no weights exist
+    return [W, xis, err]
+
+
+def GaussLegendreQuadrature(func, polyorder, a, b):
+    """Approximate the integral with Gauss-Legendre quadrature.
+
+    func -- the integrand
+    a, b -- lower and upper limits of the integral
+    polyorder -- order of the Legendre polynomial to be used
+    """
+    [Ws, xs, err] = GaussLegendreWeights(polyorder)
+    if err == 0:
+        ans = (b - a) * 0.5 * sum(Ws * func((b - a) * 0.5 * xs + (b + a) * 0.5))
+    else:
+        # (in case of error)
+        err = 1
+        ans = None
+    return [ans, err]
+
+
+def function(x):
+    """The integrand - change as required."""
+    return np.exp(x)
+
+
+def Gauss_Legendre_example():
+    order = 5
+    [Ws, xs, err] = GaussLegendreWeights(order)
+    if err == 0:
+        print("Order    : ", order)
+        print("Roots    : ", xs)
+        print("Weights  : ", Ws)
+    else:
+        print("Roots/Weights evaluation failed")
+
+    # Integrating the function
+    [ans, err] = GaussLegendreQuadrature(function, order, -3, 3)
+    if err == 0:
+        print("Integral : ", ans)
+    else:
+        print("Integral evaluation failed")
 
 
 def generalized_alpha(rho_inf):
@@ -184,6 +291,7 @@ def main():
     print(scint.simps(y))
 
     print(f'Gauss quadrature: {scint.quadrature(func, a, b)}')
+    Gauss_Legendre_example()
 
 
 if __name__ == "__main__":
