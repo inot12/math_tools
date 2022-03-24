@@ -136,7 +136,8 @@ def error(a, b, tol=1e-8):
     if np.any(a == 0):
         a[a == 0] = tol
         # Does the same as the line above.
-        # a = np.array([tol if element == 0 else element for element in np.nditer(a)])
+        # a = np.array(
+        #    [tol if element == 0 else element for element in np.nditer(a)])
         # print(a)
     return abs(a - b) / abs(a)
 
@@ -156,7 +157,7 @@ def nr(f, xn, i):
     called in the same function and for riks() this parameter is essential.
     For newton-raphson parameter i is not used, therefore we delete it.
     """
-    del i
+    del i  # ignored/unused parameter
     return xn - f(xn) / derivative(f, xn)
 
 
@@ -184,7 +185,7 @@ def newton_raphson(f, x, i, jacobian=True, inc=None):
         # the commented line ensures scaling of F with lambda, but I don't
         # think I want to do this in this case
         # if inc:
-            # F = F * inc
+        #     F = F * inc
         Kt = Jacobian(f, x)
         J = Kt
     else:
@@ -434,7 +435,8 @@ def rvs(dim=3):
 
 def main():
     Q = rvs()
-    assert np.allclose(Q.T @ Q, Q @ Q.T) is True, 'Q is not an orthogonal matrix'
+    assert np.allclose(Q.T @ Q, Q @ Q.T) is True, \
+        'Q is not an orthogonal matrix'
     print(f'Q = \n{Q}')
     print(f'Q @ Q.T should be Identity matrix = \n{Q@Q.T}')
     print(f'Q.T @ Q should be Identity matrix = \n{Q.T@Q}')

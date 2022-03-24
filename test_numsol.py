@@ -130,7 +130,6 @@ class IterateBadInput(unittest.TestCase):
 
     def test_zero_division(self):
         """error should return a value and not Nan if a = 0"""
-        pass
 
 
 def main():

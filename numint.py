@@ -58,7 +58,8 @@ def newmark_ic(qn, vn, rn, qn1, beta, tau, h):
     qn, vn, rn -- float, known state of displacement, velocity and acceleration
     qn1 -- float, initial guess for displacement in the next time step
     """
-    rn1 = (qn1 - qn) / (beta * h ** 2) - vn / (beta * h) - (0.5 - beta) * rn / beta
+    rn1 = ((qn1 - qn) / (beta * h ** 2)
+           - vn / (beta * h) - (0.5 - beta) * rn / beta)
     vn1 = vn + h * ((1 - tau) * rn + tau * rn1)
     return (qn1, rn1, vn1)
 
@@ -81,17 +82,17 @@ def newmark(f, x, h, beta=0.25, tau=0.5):
     iterate(f, x, method=newton_raphson)
 
 
-def gaussian_quadrature_rule(func, a, b):
+def gaussian_quadrature_rule(func_, a, b):
     """Return the approximation of a definite integral of a function."""
-    return scint.quadrature(func, a, b)
+    return scint.quadrature(func_, a, b)
 
 
-def gauss_legendre(func, a, b):
+def gauss_legendre(func_, a, b):
     """Gaussian quadrature rule where the domain of integration is [-1, 1]."""
     # TLDR; when you use a Gaussian quadrature rule, you use Gauss-Legendre.
     # Yields an exact results for polynomials of 2*n-1 or less.
     # The nodes x_i and weights w_i are chosen manually and i = 1, ..., n.
-    return scint.quadrature(func, a, b)
+    return scint.quadrature(func_, a, b)
 
 
 def Legendre(n, x):
@@ -99,21 +100,20 @@ def Legendre(n, x):
     x = np.array(x)
     if n == 0:
         return x * 0 + 1.0
-    elif n == 1:
+    if n == 1:
         return x
-    else:
-        return ((2.0 * n - 1.0) * x * Legendre(n - 1, x) - (n - 1) * Legendre(n - 2, x)) / n
+    return (((2.0 * n - 1.0) * x * Legendre(n - 1, x)
+            - (n - 1) * Legendre(n - 2, x)) / n)
 
 
 def DLegendre(n, x):
-    """# Derivative of the Legendre polynomials."""
+    """Derivative of the Legendre polynomials."""
     x = np.array(x)
     if n == 0:
         return x * 0
-    elif n == 1:
+    if n == 1:
         return x * 0 + 1.0
-    else:
-        return (n / (x ** 2 - 1.0)) * (x * Legendre(n, x) - Legendre(n - 1, x))
+    return (n / (x ** 2 - 1.0)) * (x * Legendre(n, x) - Legendre(n - 1, x))
 
 
 def LegendreRoots(polyorder, tolerance=1e-20):
@@ -156,16 +156,16 @@ def GaussLegendreWeights(polyorder):
     return [W, xis, err]
 
 
-def GaussLegendreQuadrature(func, polyorder, a, b):
+def GaussLegendreQuadrature(f, polyorder, a, b):
     """Approximate the integral with Gauss-Legendre quadrature.
 
-    func -- the integrand
+    f -- the integrand
     a, b -- lower and upper limits of the integral
     polyorder -- order of the Legendre polynomial to be used
     """
     [Ws, xs, err] = GaussLegendreWeights(polyorder)
     if err == 0:
-        ans = (b - a) * 0.5 * sum(Ws * func((b - a) * 0.5 * xs + (b + a) * 0.5))
+        ans = (b - a) * 0.5 * sum(Ws * f((b - a) * 0.5 * xs + (b + a) * 0.5))
     else:
         # (in case of error)
         err = 1
@@ -208,7 +208,7 @@ def generalized_alpha(rho_inf):
     Refer to:
     THREAD/courses/nwt6_I/arnold_leyendeckerNWT6/printer_nwt6_arnold.pdf
     """
-    assert rho_inf >= 0 and rho_inf <= 1, 'Rho should be in interval [0,1].'
+    assert 0 <= rho_inf <= 1, 'Rho should be in interval [0, 1].'
 
     alpha_m = (2 * rho_inf - 1) / (rho_inf + 1)
     alpha_f = rho_inf / (rho_inf + 1)
@@ -265,7 +265,8 @@ def runge_kutta_munthe_kaas(A, mn, h):
     A2 = h * A(expm(1 / 2 * A1) * mn)
     A3 = h * A(expm(1 / 2 * A2 - 1 / 8 * em.mc(A1, A2)) * mn)
     A4 = h * A(expm(A3) * mn)
-    return expm(1 / 6 * (A1 + 2 * A2 + 2 * A3 + A4 - 1 / 2 * em.mc(A1, A4))) * mn
+    return mn * expm(
+        1 / 6 * (A1 + 2 * A2 + 2 * A3 + A4 - 1 / 2 * em.mc(A1, A4)))
 
 
 def commutator_free_lie_group_method(mn, h, f):
@@ -275,7 +276,8 @@ def commutator_free_lie_group_method(mn, h, f):
     M3 = expm(1 / 2 * h * f(M2)) * mn
     M4 = expm(h * f(M3) - 1 / 2 * h * f(M1)) * M2
     mn12 = expm(1 / 12 * h * (3 * f(M1) + 2 * f(M2) + 2 * f(M3) - f(M4))) * mn
-    return expm(1 / 12 * h * (-f(M1) + 2 * f(M2) + 2 * f(M3) + 3 * f(M4))) * mn12
+    return mn12 * expm(
+        1 / 12 * h * (-f(M1) + 2 * f(M2) + 2 * f(M3) + 3 * f(M4)))
 
 
 def main():
@@ -292,6 +294,9 @@ def main():
 
     print(f'Gauss quadrature: {scint.quadrature(func, a, b)}')
     Gauss_Legendre_example()
+    print(dir(simpson))
+    print(simpson.__name__)
+    print(simpson.__defaults__)
 
 
 if __name__ == "__main__":
